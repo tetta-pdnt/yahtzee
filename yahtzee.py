@@ -5,15 +5,30 @@ import sys
 import keyboard
 import os
 
+WIDTH = 19
+
 
 def roll_dice(category_dict):
 
-    def delay_print(hand_list, save_list, is_slow,category_dict):
-        print('<->: move\nSpace: save dice\nr: reroll\nEnter: select hand\n' + '-'*18)
-        for k,v in category_dict.items():
+    def delay_print(hand_list, save_list, is_slow, category_dict, left):
+
+        print('-'*WIDTH)
+        print('<->: move\nSpace: save dice\nr: reroll\nEnter: select hand\n' + '-'*WIDTH)
+        for k, v in category_dict.items():
             result = '' if v[2] else v[0]
             print(f'{k}: {result}')
-        print('-'*18)
+        print('-'*WIDTH)
+        print(f'{left} left' + '\n' + '-'*WIDTH)
+        if left == 3:
+            print('Press "r" to roll the dice.', end='')
+            while True:
+                if keyboard.is_pressed('r'):
+                    break
+            left -= 1
+            sys.stdout.write('\033[2K\033[2A\033[G')
+            sys.stdout.flush()
+            print(f'{left} left' + '\n' + '-'*WIDTH)
+
         if is_slow:
             for c in hand_list:
                 for i in range(1, 7):
@@ -27,6 +42,7 @@ def roll_dice(category_dict):
             print(hand_text, end='')
         save_text = ''.join(map(str, save_list))
         print('|'+save_text)
+        return left
 
     def show_arrow(choice_index, max_index):
         text = '\r' + ' '*choice_index + '^' + ' '*(4-choice_index)
@@ -61,8 +77,13 @@ def roll_dice(category_dict):
     os.system('cls')
     hand_list = [random.randint(1, 6) for _ in range(5)]
     save_list = []
-    delay_print(hand_list, save_list, True, category_dict)
+    left = 3
+    left = delay_print(hand_list, save_list, True, category_dict, left)
     while True:
+        if left <= 0:
+            time.sleep(1)
+            return hand_list + save_list
+
         max_index = len(hand_list)-1
         choice_index = choice_hand(max_index)
 
@@ -73,6 +94,7 @@ def roll_dice(category_dict):
             return hand_list + save_list
 
         if choice_index == 'r':
+            left -= 1
             hand_list = [random.randint(1, 6) for _ in range(len(hand_list))]
             is_slow = True
 
@@ -83,7 +105,7 @@ def roll_dice(category_dict):
                 hand_list.append(save_list.pop(choice_index-max_index-1))
             is_slow = False
         os.system('cls')
-        delay_print(hand_list, save_list, is_slow, category_dict)
+        delay_print(hand_list, save_list, is_slow, category_dict, left)
         time.sleep(0.3)
 
 
@@ -99,7 +121,9 @@ def choice_category(hand, category_dict):
     def show_hand(hand, category_dict, category_index):
         os.system('cls')
 
-        print(''.join(map(str, hand)))
+        print('-'*WIDTH)
+        print(' '*((WIDTH-5)//2) + ''.join(map(str, hand)))
+        print('-'*WIDTH)
 
         for i, (k, v) in enumerate(category_dict.items()):
             pointer = '>' if i == category_index else ' '
@@ -137,16 +161,16 @@ def choice_category(hand, category_dict):
 
 category_dict = {
     'Aces': [0, lambda hand:hand.count(1)*1, True],
-    'Twos': [0, lambda hand:hand.count(2)*2, True],
+    'Deuces': [0, lambda hand:hand.count(2)*2, True],
     'Threes': [0, lambda hand:hand.count(3)*3, True],
     'Fours': [0, lambda hand:hand.count(4)*4, True],
     'Fives': [0, lambda hand:hand.count(5)*5, True],
     'Sixes': [0, lambda hand:hand.count(6)*6, True],
-    'Chance': [0, lambda hand:sum(hand), True],
-    'Four of a Kind': [0, lambda hand:sum(hand) if max([hand.count(i) for i in set(hand)]) >= 4 else 0, True],
+    'Choice': [0, lambda hand:sum(hand), True],
+    '4 of a Kind': [0, lambda hand:sum(hand) if max([hand.count(i) for i in set(hand)]) >= 4 else 0, True],
     'Full House': [0, lambda hand:sum(hand) if sorted([hand.count(i) for i in set(hand)]) == [2, 3] else 0, True],
-    'Small Straight': [0, lambda hand:15 if 3 in calc_sub(hand) else 0, True],
-    'Large Straight': [0, lambda hand:30 if calc_sub(hand) == [3, 3] else 0, True],
+    'S. Straight': [0, lambda hand:15 if 3 in calc_sub(hand) else 0, True],
+    'L. Straight': [0, lambda hand:30 if calc_sub(hand) == [3, 3] else 0, True],
     'Yahtzee': [0, lambda hand:50 if len(set(hand)) == 1 else 0, True],
     # 'Bonus':[0,0],
 }
@@ -157,12 +181,12 @@ while True:
     os.system('cls')
     category_index = choice_category(hand, category_dict)
     if category_index != 'r':
-        choiced_category = category_dict[list(category_dict.keys())[category_index]]
-        choiced_category[0] =choiced_category[1](hand)
+        choiced_category = category_dict[list(
+            category_dict.keys())[category_index]]
+        choiced_category[0] = choiced_category[1](hand)
         choiced_category[2] = False
 
     if not any([x[2] for x in category_dict.values()]):
         print(f'your scoa is {sum([x[0] for x in category_dict.values()])}!')
         break
 sys.exit()
-
