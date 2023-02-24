@@ -8,7 +8,7 @@ import os
 WIDTH = 19
 
 
-def roll_dice(category_dict):
+def roll_dice(category_dict, left, hands):
 
     def delay_print(hand_list, save_list, is_slow, category_dict, left):
 
@@ -37,9 +37,11 @@ def roll_dice(category_dict):
                 print(f'\b{c}', end=' ')
                 time.sleep(0.3)
             print('\b', end='')
+
         else:
             hand_text = ''.join(map(str, hand_list))
             print(hand_text, end='')
+
         save_text = ''.join(map(str, save_list))
         print('|'+save_text)
         return left
@@ -75,14 +77,16 @@ def roll_dice(category_dict):
                 return return_dict[key]
 
     os.system('cls')
-    hand_list = [random.randint(1, 6) for _ in range(5)]
-    save_list = []
-    left = 3
-    left = delay_print(hand_list, save_list, True, category_dict, left)
+
+    hand_list = hands[0] if hands else [random.randint(1, 6) for _ in range(5)]
+    save_list = hands[1] if hands else []
+    is_slow = False if hands else True
+
+    left = delay_print(hand_list, save_list, is_slow, category_dict, left)
     while True:
         if left <= 0:
             time.sleep(1)
-            return hand_list + save_list
+            return [hand_list , save_list], left
 
         max_index = len(hand_list)-1
         choice_index = choice_hand(max_index)
@@ -91,7 +95,7 @@ def roll_dice(category_dict):
             raise Exception('ESCキーが押されました')
 
         if choice_index == 'enter':
-            return hand_list + save_list
+            return [hand_list , save_list], left
 
         if choice_index == 'r':
             left -= 1
@@ -104,6 +108,7 @@ def roll_dice(category_dict):
             else:
                 hand_list.append(save_list.pop(choice_index-max_index-1))
             is_slow = False
+
         os.system('cls')
         delay_print(hand_list, save_list, is_slow, category_dict, left)
         time.sleep(0.3)
@@ -116,7 +121,7 @@ def calc_sub(hand):
     return sub_set
 
 
-def choice_category(hand, category_dict):
+def choice_category(hand, category_dict, left):
 
     def show_hand(hand, category_dict, category_index):
         os.system('cls')
@@ -152,7 +157,7 @@ def choice_category(hand, category_dict):
         if key in ['enter', 'space'] and can_choice_hand(category_dict, category_index):
             return category_index
 
-        if key == 'r':
+        if key == 'r' and left > 0:
             return 'r'
 
         show_hand(hand, category_dict, category_index)
@@ -177,14 +182,20 @@ category_dict = {
 
 
 while True:
-    hand = roll_dice(category_dict)
-    os.system('cls')
-    category_index = choice_category(hand, category_dict)
-    if category_index != 'r':
-        choiced_category = category_dict[list(
-            category_dict.keys())[category_index]]
-        choiced_category[0] = choiced_category[1](hand)
-        choiced_category[2] = False
+    left = 3
+    hands = []
+    category_index = 'r'
+    while category_index == 'r':
+        hands,left = roll_dice(category_dict,left,hands)
+        os.system('cls')
+        hand = sum(hands,[])
+        category_index = choice_category(hand, category_dict, left)
+        time.sleep(0.3)
+
+    choiced_category = category_dict[list(
+        category_dict.keys())[category_index]]
+    choiced_category[0] = choiced_category[1](hand)
+    choiced_category[2] = False
 
     if not any([x[2] for x in category_dict.values()]):
         print(f'your scoa is {sum([x[0] for x in category_dict.values()])}!')
